@@ -1,0 +1,4 @@
+# local tool state must never be published
+.omc/
+.claude/
+__pycache__/
