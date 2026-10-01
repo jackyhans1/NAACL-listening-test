@@ -60,11 +60,38 @@
     return x.toString(16).padStart(8, '0');
   }
 
-  /* ---------- 오디오 ---------- */
+  /* ---------- 오디오 ----------
+     Each recording is downloaded completely before its player is shown, then played from memory, so playback
+     can no longer stall halfway while the file is still arriving. The next screen's files are fetched ahead. */
+  const blobs = new Map();                       // audio id -> Promise<blob URL>
+  function loadAudio(id) {
+    if (!blobs.has(id)) {
+      const p = fetch(`audio/${id}.wav`, { cache: 'force-cache' })
+        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.blob(); })
+        .then((b) => URL.createObjectURL(b));
+      p.catch(() => blobs.delete(id));           // allow a retry after a failed download
+      blobs.set(id, p);
+    }
+    return blobs.get(id);
+  }
+  function keepOnly(ids) {                        // free memory held by screens already passed
+    for (const [id, p] of blobs) if (!ids.has(id)) { p.then((u) => URL.revokeObjectURL(u)).catch(() => {}); blobs.delete(id); }
+  }
   function player(label, sub, id, onChange) {
-    const audio = h('audio', { controls: true, preload: 'auto', src: `audio/${id}.wav` });
+    const audio = h('audio', { controls: true, preload: 'auto', hidden: true });
     const st = { plays: 0, full: false };
-    const status = h('div', { class: 'heard' }, '아직 끝까지 듣지 않음');
+    const status = h('div', { class: 'heard' }, '음성을 불러오는 중…');
+    const retry = h('button', { class: 'btn secondary', type: 'button', hidden: true }, '다시 불러오기');
+    const attach = () => {
+      status.textContent = '음성을 불러오는 중…'; retry.hidden = true;
+      loadAudio(id).then((url) => {
+        audio.src = url; audio.hidden = false; status.textContent = '아직 끝까지 듣지 않음';
+      }).catch(() => {
+        status.textContent = '음성을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 불러오기를 눌러 주세요.';
+        retry.hidden = false;
+      });
+    };
+    retry.addEventListener('click', attach);
     audio.addEventListener('play', () => {
       document.querySelectorAll('audio').forEach((a) => { if (a !== audio) a.pause(); });
       st.plays += 1; onChange();
@@ -73,7 +100,8 @@
       st.full = true; status.textContent = '✓ 끝까지 들음 — 다시 들어도 됩니다'; status.classList.add('yes'); onChange();
     });
     st.node = h('div', { class: 'player' }, h('div', { class: 'player-title' }, label),
-      h('div', { class: 'player-sub' }, sub), audio, status);
+      h('div', { class: 'player-sub' }, sub), audio, status, retry);
+    attach();
     return st;
   }
   function scale(name, labels, onChange) {
@@ -87,9 +115,12 @@
     return wrap;
   }
   const picked = (name) => { const e = document.querySelector(`input[name="${name}"]:checked`); return e ? Number(e.value) : null; };
-  function prefetch(i) {
-    const sc = screensOf(S.group)[i];
-    if (sc) for (const id of [sc.r, sc.t]) { const a = new Audio(); a.preload = 'auto'; a.src = `audio/${id}.wav`; }
+  function prefetch(i) {                          // keep the current and next screen's files in memory
+    const all = screensOf(S.group), keep = new Set();
+    for (const k of [i - 1, i]) if (all[k]) { keep.add(all[k].r); keep.add(all[k].t); }
+    keepOnly(keep);
+    const sc = all[i];
+    if (sc) for (const id of [sc.r, sc.t]) loadAudio(id).catch(() => {});
   }
 
   /* ---------- 시작 화면 ---------- */
@@ -192,6 +223,7 @@
       sc.p ? h('p', {}, h('span', { class: 'tag' }, '연습 — 점수에 포함되지 않음')) : null,
       memoryOnly ? h('p', { class: 'error' }, '이 브라우저는 진행 저장을 허용하지 않습니다. 창을 닫지 말고 끝까지 진행해 주세요.') : null,
       h('div', { class: 'audio-row' }, ref.node, test.node),
+      h('p', { class: 'muted small' }, '음성이 끊겨 들리면 다시 재생해 주세요. 다시 재생하면 제대로 들을 수 있습니다.'),
       h('div', { class: 'card' },
         h('div', { class: 'question' },
           h('div', { class: 'q-title' }, '질문 1. 평가 음성이 기준 음성의 화자와 같은 사람의 목소리처럼 들리나요?'),
