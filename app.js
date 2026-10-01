@@ -174,7 +174,7 @@
 
   function volumeCheck() {
     const next = h('button', { class: 'btn', disabled: true }, '음량을 맞췄습니다 — 계속');
-    const p = player('음량 확인', '재생하면서 기기 음량을 조절하세요', screensOf(S.group)[0].r,
+    const p = player('음량 확인', '재생하면서 기기 음량을 조절하세요', study.groups[S.group].volume || screensOf(S.group)[0].r,
       () => { if (p.plays > 0) next.disabled = false; });
     next.addEventListener('click', () => run(0));
     render([h('div', { class: 'card' }, h('h1', {}, '음량 맞추기'),
@@ -192,7 +192,7 @@
     const all = screensOf(S.group), np = nPractice(S.group);
     if (i >= all.length) return complete();
     const rated = i - np;
-    if (rated === 0 && !shownBreaks.has('practice')) {
+    if (np > 0 && rated === 0 && !shownBreaks.has('practice')) {
       shownBreaks.add('practice');
       return interstitial('연습이 끝났습니다', ['이제 본 평가가 시작됩니다. 방법은 연습과 똑같습니다.',
         '각 화면을 독립적으로, 집중해서 들어 주세요.'], () => run(i));
@@ -271,11 +271,11 @@
   function download() {
     const cell = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
     const rows = [COLS];
-    screensOf(S.group).forEach((sc, i) => {
-      const a = S.answers[i];
+    screensOf(S.group).forEach((sc, k) => {           // k = position on this site, sc.i = index in the schedule
+      const a = S.answers[k];
       if (!a) return;
-      const check = fnv([S.rater, S.group, i, sc.r, sc.t, a.sim, a.nat].join('|'));
-      rows.push([study.version, S.mode, S.rater, S.group, S.schedule, i, sc.p ? 1 : 0, sc.r, sc.t, a.sim, a.nat,
+      const check = fnv([S.rater, S.group, sc.i, sc.r, sc.t, a.sim, a.nat].join('|'));
+      rows.push([study.version, S.mode, S.rater, S.group, S.schedule, sc.i, sc.p ? 1 : 0, sc.r, sc.t, a.sim, a.nat,
         a.refPlays, a.testPlays, a.refFull ? 1 : 0, a.testFull ? 1 : 0, a.start, a.submit, a.elapsed,
         a.refListened == null ? '' : a.refListened.toFixed(2), a.testListened == null ? '' : a.testListened.toFixed(2),
         study.min_listen_s ?? '', S.startedAt, check]);
