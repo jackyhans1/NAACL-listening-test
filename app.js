@@ -1,12 +1,12 @@
 (() => {
   'use strict';
   /* 음성 청취 평가 — 서버 없는 정적 페이지. 진행 상황은 이 브라우저(localStorage)에 저장되고,
-     마지막에 참가자가 점수 CSV를 내려받아 연구자에게 보낸다. 조건 정보는 이 파일에도 study.js에도 없다. */
+     마지막에 참가자가 점수 CSV를 내려받아 김지한에게 보낸다. 참여 동의와 참여 조건 확인은 사이트 밖에서 미리 받는다. 조건 정보는 이 파일에도 study.js에도 없다. */
 
   const study = window.VOX_STUDY;
   const $ = (id) => document.getElementById(id);
   if (!study || !study.groups) {
-    document.body.textContent = 'study.js를 찾을 수 없습니다. 연구자에게 알려 주세요.';
+    document.body.textContent = 'study.js를 찾을 수 없습니다. 저 (김지한)에게 알려 주세요.';
     return;
   }
   const GROUPS = Object.keys(study.groups).sort();
@@ -96,7 +96,6 @@
   function initIntro() {
     $('test-banner').hidden = study.mode !== 'test';
     $('minutes').textContent = String(study.estimated_minutes).replace('-', '–');
-    $('consent-body').innerHTML = study.consent_html;
     $('group').replaceChildren(h('option', { value: '' }, '그룹 선택'),
       ...GROUPS.map((g) => h('option', { value: g }, `그룹 ${g}`)));
     $('setup-form').addEventListener('submit', (ev) => { ev.preventDefault(); start(); });
@@ -107,15 +106,8 @@
     const msg = $('setup-message');
     const rater = $('rater-id').value.trim();
     const group = $('group').value;
-    const phones = (document.querySelector('input[name=phones]:checked') || {}).value;
-    if (!$('consent').checked) { msg.textContent = '먼저 참여 동의 항목에 체크해 주세요.'; return; }
     if (!rater) { msg.textContent = '평가자 ID를 입력해 주세요.'; return; }
     if (!group) { msg.textContent = '평가 그룹을 선택해 주세요.'; return; }
-    if (!$('age18').checked || !$('hearing').checked) {
-      msg.textContent = '이 평가는 만 18세 이상이며 듣기에 문제가 없는 분을 대상으로 합니다. 해당되면 두 항목에 체크해 주세요.';
-      return;
-    }
-    if (!phones) { msg.textContent = '이어폰·헤드폰 사용 여부를 선택해 주세요.'; return; }
     msg.textContent = '';
     const prev = load(key(rater, group));
     // resume only on the same site build and mode (a test-site session must never continue as live data)
@@ -123,9 +115,7 @@
       S = prev;
     } else {
       S = { version: study.version, mode: study.mode, rater, group, schedule: study.groups[group].schedule_id,
-            startedAt: new Date().toISOString(), consent: true, age18: true, hearing: true,
-            headphones: phones === 'yes', english: $('english').value ? Number($('english').value) : null,
-            answers: {}, next: 0, finished: false };
+            startedAt: new Date().toISOString(), answers: {}, next: 0, finished: false };
       save();
     }
     if (S.finished) return complete();
@@ -219,7 +209,7 @@
     S.finished = true; save();
     const n = Object.keys(S.answers).length;
     $('complete-copy').textContent = `평가자 ${S.rater} · 그룹 ${S.group} — 화면 ${n}개의 점수가 이 브라우저에 저장되었습니다. ` +
-      '아래 버튼으로 CSV를 내려받아 연구자에게 보내 주세요.';
+      '아래 버튼으로 CSV를 내려받아 저 (김지한)에게 보내 주세요.';
     screen('complete');
   }
 
@@ -227,7 +217,7 @@
   const COLS = ['site_version', 'site_mode', 'rater_id', 'group', 'schedule_id', 'screen_index', 'is_practice',
     'reference_audio_id', 'test_audio_id', 'similarity', 'naturalness', 'reference_play_count', 'test_play_count',
     'reference_heard_full', 'test_heard_full', 'trial_start_time', 'submit_time', 'trial_elapsed_ms',
-    'consent', 'age_18_plus', 'hearing_ok', 'headphones', 'english_comfort', 'session_started_at', 'row_check'];
+    'session_started_at', 'row_check'];
   function download() {
     const cell = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
     const rows = [COLS];
@@ -237,7 +227,7 @@
       const check = fnv([S.rater, S.group, i, sc.r, sc.t, a.sim, a.nat].join('|'));
       rows.push([study.version, S.mode, S.rater, S.group, S.schedule, i, sc.p ? 1 : 0, sc.r, sc.t, a.sim, a.nat,
         a.refPlays, a.testPlays, a.refFull ? 1 : 0, a.testFull ? 1 : 0, a.start, a.submit, a.elapsed,
-        S.consent ? 1 : 0, S.age18 ? 1 : 0, S.hearing ? 1 : 0, S.headphones ? 1 : 0, S.english ?? '', S.startedAt, check]);
+        S.startedAt, check]);
     });
     const csv = '﻿' + rows.map((r) => r.map(cell).join(',')).join('\n') + '\n';
     const a = document.createElement('a');

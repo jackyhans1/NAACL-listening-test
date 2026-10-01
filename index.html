@@ -26,10 +26,10 @@
         <p>두 개의 녹음을 듣고, <b>평가 음성이 기준 화자와 같은 사람처럼 들리는지</b>와
           <b>얼마나 자연스러운지</b>를 각각 1–5점으로 평가해 주세요.</p>
         <ul class="facts">
-          <li>소요 시간: 약 <b id="minutes">30–45</b>분 (중간에 짧은 휴식 2번)</li>
+          <li>소요 시간: 약 <b id="minutes">15–25</b>분 (중간에 짧은 휴식 2번)</li>
           <li>조용한 곳에서 <b>이어폰 또는 헤드폰</b>을 사용해 주세요. PC·노트북을 권장합니다.</li>
           <li>진행 상황은 <b>이 브라우저에 자동 저장</b>됩니다. 중간에 창을 닫아도 같은 평가자 ID·그룹으로 다시 시작하면 이어서 할 수 있습니다.</li>
-          <li>모두 마치면 <b>점수 CSV 파일을 내려받아 연구자에게 보내</b> 주세요.</li>
+          <li>모두 마치면 <b>점수 CSV 파일을 내려받아 저 (김지한)에게 보내</b> 주세요.</li>
         </ul>
       </div>
 
@@ -88,44 +88,17 @@
           같은 사람처럼 들리지만 부자연스러울 수도 있습니다. 정답은 없으니 솔직한 인상대로 답해 주세요.</p>
       </div>
 
-      <div class="card">
-        <h2>연구 참여 안내 및 동의</h2>
-        <div id="consent-body" class="consent-body"></div>
-        <label class="check"><input type="checkbox" id="consent"> 위 내용을 읽었으며, 평가에 참여하는 데 동의합니다.</label>
-      </div>
-
       <form id="setup-form" class="card" autocomplete="off">
         <h2>평가 시작</h2>
         <div class="field">
           <label for="rater-id">평가자 ID</label>
-          <input type="text" id="rater-id" maxlength="40" placeholder="연구자가 알려준 평가자 ID">
-          <div class="help">연구자에게 받은 ID를 그대로 입력하세요. 이어서 할 때도 같은 ID를 입력해야 합니다.</div>
+          <input type="text" id="rater-id" maxlength="40" placeholder="저 (김지한)에게 받은 평가자 ID">
+          <div class="help">저 (김지한)에게 받은 ID를 그대로 입력하세요. 이어서 할 때도 같은 ID를 입력해야 합니다.</div>
         </div>
         <div class="field">
           <label for="group">평가 그룹</label>
           <select id="group"></select>
-          <div class="help">연구자에게 받은 그룹(A–P)을 선택하세요.</div>
-        </div>
-        <div class="field">
-          <div class="label">참여 조건 확인</div>
-          <label class="check"><input type="checkbox" id="age18"> 만 18세 이상입니다.</label>
-          <label class="check"><input type="checkbox" id="hearing"> 청력이 정상이거나, 보청기 등으로 교정되어 듣기 평가에 문제가 없습니다.</label>
-          <div class="inline">
-            <span>지금 이어폰·헤드폰을 사용하고 있나요?</span>
-            <label><input type="radio" name="phones" value="yes"> 예</label>
-            <label><input type="radio" name="phones" value="no"> 아니요</label>
-          </div>
-          <div class="inline">
-            <span>영어 음성을 듣는 것이 얼마나 편한가요? (선택)</span>
-            <select id="english">
-              <option value="">응답 안 함</option>
-              <option value="1">1 — 전혀 편하지 않음</option>
-              <option value="2">2 — 조금 편함</option>
-              <option value="3">3 — 보통</option>
-              <option value="4">4 — 편함</option>
-              <option value="5">5 — 매우 편함</option>
-            </select>
-          </div>
+          <div class="help">저 (김지한)에게 받은 그룹(A–P)을 선택하세요.</div>
         </div>
         <p class="error" id="setup-message"></p>
         <div class="actions"><button class="btn" type="submit" id="start-button">평가 시작</button></div>
@@ -142,7 +115,7 @@
         <h1>평가가 저장되었습니다</h1>
         <p id="complete-copy"></p>
         <div class="actions center"><button class="btn big" id="download-button" type="button">점수 CSV 다운로드</button></div>
-        <p class="muted">내려받은 CSV 파일을 <b>열어서 수정하거나 다시 저장하지 말고</b> 그대로 연구자에게 보내 주세요.
+        <p class="muted">내려받은 CSV 파일을 <b>열어서 수정하거나 다시 저장하지 말고</b> 그대로 저 (김지한)에게 보내 주세요.
           파일이 안 받아졌다면 버튼을 다시 누르면 됩니다.</p>
       </div>
     </section>
