@@ -79,13 +79,13 @@
   }
   function player(label, sub, id, onChange) {
     const audio = h('audio', { controls: true, preload: 'auto', hidden: true });
-    const st = { plays: 0, full: false };
+    const st = { plays: 0, full: false, listened: 0 };
     const status = h('div', { class: 'heard' }, '음성을 불러오는 중…');
     const retry = h('button', { class: 'btn secondary', type: 'button', hidden: true }, '다시 불러오기');
     const attach = () => {
       status.textContent = '음성을 불러오는 중…'; retry.hidden = true;
       loadAudio(id).then((url) => {
-        audio.src = url; audio.hidden = false; status.textContent = '아직 끝까지 듣지 않음';
+        audio.src = url; audio.hidden = false; status.textContent = '아직 듣지 않음';
       }).catch(() => {
         status.textContent = '음성을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 불러오기를 눌러 주세요.';
         retry.hidden = false;
@@ -96,8 +96,21 @@
       document.querySelectorAll('audio').forEach((a) => { if (a !== audio) a.pause(); });
       st.plays += 1; onChange();
     });
+    // heard = played to the end, or actually played for at least study.min_listen_s seconds (seeking is not counted:
+    // audio.played only holds the stretches that were really played)
+    const need = study.min_listen_s || Infinity;
+    const heard = () => {
+      if (st.full) return;
+      st.full = true; status.textContent = '✓ 들음 — 다음으로 넘어가도 되고, 다시 들어도 됩니다'; status.classList.add('yes'); onChange();
+    };
+    audio.addEventListener('timeupdate', () => {
+      let sum = 0;
+      for (let k = 0; k < audio.played.length; k += 1) sum += audio.played.end(k) - audio.played.start(k);
+      st.listened = Math.max(st.listened, sum);
+      if (sum >= need) heard();
+    });
     audio.addEventListener('ended', () => {
-      st.full = true; status.textContent = '✓ 끝까지 들음 — 다시 들어도 됩니다'; status.classList.add('yes'); onChange();
+      st.listened = Math.max(st.listened, audio.duration || 0); heard();
     });
     st.node = h('div', { class: 'player' }, h('div', { class: 'player-title' }, label),
       h('div', { class: 'player-sub' }, sub), audio, status, retry);
@@ -127,6 +140,7 @@
   function initIntro() {
     $('test-banner').hidden = study.mode !== 'test';
     $('minutes').textContent = String(study.estimated_minutes).replace('-', '–');
+    document.querySelectorAll('.minlisten').forEach((e) => { e.textContent = String(study.min_listen_s); });
     $('group').replaceChildren(h('option', { value: '' }, '그룹 선택'),
       ...GROUPS.map((g) => h('option', { value: g }, `그룹 ${g}`)));
     $('setup-form').addEventListener('submit', (ev) => { ev.preventDefault(); start(); });
@@ -200,8 +214,9 @@
     const hint = h('span', { class: 'hint' });
     const update = () => {
       const miss = [];
-      if (!ref.full) miss.push('기준 음성을 끝까지 듣기');
-      if (!test.full) miss.push('평가 음성을 끝까지 듣기');
+      const rule = study.min_listen_s ? `끝까지 또는 ${study.min_listen_s}초 이상` : '끝까지';
+      if (!ref.full) miss.push(`기준 음성 듣기(${rule})`);
+      if (!test.full) miss.push(`평가 음성 듣기(${rule})`);
       if (picked('sim') == null) miss.push('질문 1 답하기');
       if (picked('nat') == null) miss.push('질문 2 답하기');
       nextBtn.disabled = miss.length > 0;
@@ -213,7 +228,8 @@
       if (nextBtn.disabled) return;
       nextBtn.disabled = true;
       S.answers[i] = { sim: picked('sim'), nat: picked('nat'), refPlays: ref.plays, testPlays: test.plays,
-        refFull: ref.full, testFull: test.full, start: startedAt, submit: new Date().toISOString(),
+        refFull: ref.full, testFull: test.full, refListened: ref.listened, testListened: test.listened,
+        start: startedAt, submit: new Date().toISOString(),
         elapsed: Math.round(performance.now() - t0) };
       S.next = i + 1;
       save();
@@ -223,6 +239,8 @@
       sc.p ? h('p', {}, h('span', { class: 'tag' }, '연습 — 점수에 포함되지 않음')) : null,
       memoryOnly ? h('p', { class: 'error' }, '이 브라우저는 진행 저장을 허용하지 않습니다. 창을 닫지 말고 끝까지 진행해 주세요.') : null,
       h('div', { class: 'audio-row' }, ref.node, test.node),
+      study.min_listen_s ? h('p', { class: 'note small' }, h('b', {}, `${study.min_listen_s}초 이상만 들으면 바로 다음으로 넘어갈 수 있습니다.`),
+        ` ${study.min_listen_s}초보다 짧은 음성은 끝까지 들어 주세요.`) : null,
       h('p', { class: 'muted small' }, '음성이 끊겨 들리면 다시 재생해 주세요. 다시 재생하면 제대로 들을 수 있습니다.'),
       h('div', { class: 'card' },
         h('div', { class: 'question' },
@@ -249,7 +267,7 @@
   const COLS = ['site_version', 'site_mode', 'rater_id', 'group', 'schedule_id', 'screen_index', 'is_practice',
     'reference_audio_id', 'test_audio_id', 'similarity', 'naturalness', 'reference_play_count', 'test_play_count',
     'reference_heard_full', 'test_heard_full', 'trial_start_time', 'submit_time', 'trial_elapsed_ms',
-    'session_started_at', 'row_check'];
+    'reference_listened_s', 'test_listened_s', 'min_listen_s', 'session_started_at', 'row_check'];
   function download() {
     const cell = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
     const rows = [COLS];
@@ -259,7 +277,8 @@
       const check = fnv([S.rater, S.group, i, sc.r, sc.t, a.sim, a.nat].join('|'));
       rows.push([study.version, S.mode, S.rater, S.group, S.schedule, i, sc.p ? 1 : 0, sc.r, sc.t, a.sim, a.nat,
         a.refPlays, a.testPlays, a.refFull ? 1 : 0, a.testFull ? 1 : 0, a.start, a.submit, a.elapsed,
-        S.startedAt, check]);
+        a.refListened == null ? '' : a.refListened.toFixed(2), a.testListened == null ? '' : a.testListened.toFixed(2),
+        study.min_listen_s ?? '', S.startedAt, check]);
     });
     const csv = '﻿' + rows.map((r) => r.map(cell).join(',')).join('\n') + '\n';
     const a = document.createElement('a');
